@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Step Buddy — Walking Game</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Fredoka:wght@400;500;600;700&display=swap');
+
+:root {
+  --sky:#5ec8ff;
+  --grape:#8b5cf6;
+  --grape2:#a78bfa;
+  --sun:#ffd23f;
+  --sun-deep:#ffb01f;
+  --grass:#3ddc84;
+  --grass-deep:#22b866;
+  --watermelon:#ff5e7e;
+  --cream:#fff8ef;
+  --ink:#2a2350;
+  --ink-soft:#6b6391;
+}
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+body {
+  font-family:'Fredoka', sans-serif;
+  background:
+    radial-gradient(circle at 15% 10%, #ffe6a0 0%, transparent 35%),
+    radial-gradient(circle at 85% 15%, #ffc3d4 0%, transparent 40%),
+    linear-gradient(160deg, #6fd0ff 0%, #a78bfa 100%);
+  background-attachment:fixed;
+  color:var(--ink);
+  min-height:100vh;
+  padding:1.5rem 1rem 3rem;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+h1.app-title {
+  font-family:'Baloo 2', sans-serif; font-weight:800;
+  font-size:clamp(1.5rem, 4.5vw, 2.6rem); color:#fff; text-align:center;
+  text-shadow:0 4px 0 rgba(0,0,0,0.12), 0 8px 18px rgba(0,0,0,0.2);
+  margin-bottom:0.4rem; letter-spacing:0.3px; max-width:820px;
+}
+.app-sub {
+  color:#fff; opacity:0.95; text-align:center;
+  font-size:clamp(0.85rem,2.4vw,1.1rem); margin-bottom:1.8rem;
+  text-shadow:0 2px 4px rgba(0,0,0,0.15); max-width:640px; line-height:1.4;
+}
+
+.stage {
+  display:flex; gap:2.5rem; flex-wrap:wrap;
+  justify-content:center; align-items:flex-start;
+  width:100%; max-width:900px;
+}
+.device-col { display:flex; flex-direction:column; align-items:center; gap:0.9rem; }
+.device-tag {
+  font-family:'Baloo 2', sans-serif; font-weight:700; font-size:1.05rem;
+  color:#fff; background:rgba(0,0,0,0.18);
+  padding:0.35rem 1.1rem; border-radius:999px;
+  display:flex; align-items:center; gap:0.4rem;
+}
+
+/* ===== APPLE WATCH (kid view) ===== */
+.watch-case {
+  width:250px; height:300px;
+  background:#1c1c1e; border:7px solid #2c2c2e; border-radius:56px;
+  position:relative;
+  box-shadow:0 35px 70px rgba(40,20,80,0.5), inset 0 0 12px rgba(255,255,255,0.08);
+}
+.watch-case::after { content:''; position:absolute; right:-12px; top:62px; width:11px; height:40px; background:#3a3a3c; border-radius:4px 9px 9px 4px; }
+.watch-case::before { content:''; position:absolute; right:-10px; top:120px; width:7px; height:60px; background:#3a3a3c; border-radius:2px 5px 5px 2px; }
+.watch-screen {
+  position:absolute; top:9px; left:9px; right:9px; bottom:9px;
+  background:linear-gradient(165deg, var(--sky) 0%, var(--grape2) 100%);
+  border-radius:44px; overflow:hidden;
+  display:flex; flex-direction:column; align-items:center;
+  padding:16px 14px; transition:background 0.5s ease;
+}
+.watch-screen.tired { background:linear-gradient(165deg,#ffd98a 0%,#ffb01f 100%); }
+.watch-screen.rest  { background:linear-gradient(165deg,#ff9db0 0%,#ff5e7e 100%); }
+.watch-statusbar {
+  width:100%; display:flex; justify-content:space-between; align-items:center;
+  font-family:'Baloo 2',sans-serif; font-weight:700; font-size:0.72rem;
+  color:#fff; opacity:0.9; margin-bottom:6px;
+}
+.buddy {
+  font-size:2.2rem; line-height:1; margin:0.2rem 0 0.4rem;
+  filter:drop-shadow(0 5px 6px rgba(0,0,0,0.22)); transition:transform 0.3s ease;
+}
+.buddy.bounce { animation:bounce 0.6s ease; }
+@keyframes bounce { 0%,100%{transform:translateY(0)} 30%{transform:translateY(-12px)} 60%{transform:translateY(0)} }
+
+/* energy ring */
+.ring-wrap { position:relative; width:88px; height:88px; margin:0.1rem 0 0.6rem; }
+.ring-svg { transform:rotate(-90deg); }
+.ring-bg { fill:none; stroke:rgba(255,255,255,0.35); stroke-width:11; }
+.ring-fill {
+  fill:none; stroke:var(--grass); stroke-width:11; stroke-linecap:round;
+  stroke-dasharray:238; stroke-dashoffset:36;
+  transition:stroke-dashoffset 0.6s cubic-bezier(.4,1.3,.5,1), stroke 0.4s ease;
+}
+.ring-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; color:#fff; }
+.ring-num { font-family:'Baloo 2',sans-serif; font-weight:800; font-size:1.2rem; text-shadow:0 2px 3px rgba(0,0,0,0.25); }
+.ring-cap { font-size:0.52rem; font-weight:600; opacity:0.9; letter-spacing:0.5px; }
+
+.buddy-says {
+  background:#fff; color:var(--ink); font-weight:600; font-size:0.92rem;
+  padding:0.7rem 0.85rem; border-radius:14px;
+  max-width:98%; box-shadow:0 3px 0 rgba(0,0,0,0.08); line-height:1.35;
+  text-align:center;
+}
+
+/* ===== CONTROLS ===== */
+.controls-card {
+  background:rgba(255,255,255,0.92); border-radius:28px;
+  padding:1.6rem 1.5rem; width:300px;
+  box-shadow:0 24px 50px rgba(40,20,80,0.3);
+}
+.controls-card h3 { font-family:'Baloo 2',sans-serif; font-weight:800; font-size:1.2rem; color:var(--ink); }
+.controls-card .hint { color:var(--ink-soft); font-size:0.82rem; margin-bottom:1.3rem; }
+.slider-group { margin-bottom:1.3rem; }
+.slider-head { display:flex; justify-content:space-between; align-items:center; font-weight:600; font-size:0.9rem; color:var(--ink); margin-bottom:0.5rem; }
+.slider-head .v { font-family:'Baloo 2',sans-serif; font-weight:700; color:var(--grape); background:#f0ebfb; padding:1px 10px; border-radius:999px; font-size:0.85rem; }
+input[type=range]{ -webkit-appearance:none; width:100%; height:14px; border-radius:999px; background:#e7e0f5; outline:none; }
+input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:30px; height:30px; border-radius:50%; background:var(--watermelon); border:4px solid #fff; cursor:pointer; box-shadow:0 3px 8px rgba(0,0,0,0.25); transition:transform 0.1s; }
+input[type=range]::-webkit-slider-thumb:active{ transform:scale(1.15); }
+input[type=range]::-moz-range-thumb{ width:30px; height:30px; border-radius:50%; background:var(--watermelon); border:4px solid #fff; cursor:pointer; }
+
+/* ===== PARENT PHONE ===== */
+.phone {
+  width:280px; background:#1a1330; border-radius:42px; padding:13px;
+  box-shadow:0 30px 60px rgba(40,20,80,0.45), inset 0 0 0 3px rgba(255,255,255,0.06); position:relative;
+}
+.phone::before { content:''; position:absolute; top:22px; left:50%; transform:translateX(-50%); width:80px; height:6px; border-radius:99px; background:rgba(255,255,255,0.18); z-index:5; }
+.p-screen { background:var(--cream); border-radius:30px; overflow:hidden; min-height:520px; display:flex; flex-direction:column; }
+.parent-top { background:linear-gradient(160deg, #2a2350, #4a3d8f); padding:1.6rem 1.3rem 1.3rem; color:#fff; }
+.parent-title { font-family:'Baloo 2',sans-serif; font-weight:700; font-size:1.15rem; }
+.parent-sub { font-size:0.8rem; opacity:0.75; margin-top:2px; }
+.live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#3ddc84; margin-right:5px; animation:blink 1.4s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.parent-body { padding:1.3rem; display:flex; flex-direction:column; gap:1rem; flex:1; }
+.status-card { border-radius:20px; padding:1.2rem; text-align:center; transition:background 0.4s ease; }
+.status-card.ok { background:#eaf9f0; }
+.status-card.tired { background:#fff6e0; }
+.status-card.rest { background:#ffe9ec; }
+.status-face { font-size:2.6rem; }
+.status-word { font-family:'Baloo 2',sans-serif; font-weight:800; font-size:1.25rem; margin-top:0.3rem; }
+.status-card.ok .status-word { color:var(--grass-deep); }
+.status-card.tired .status-word { color:var(--sun-deep); }
+.status-card.rest .status-word { color:var(--watermelon); }
+.status-msg { font-size:0.85rem; color:var(--ink-soft); margin-top:0.4rem; font-weight:500; }
+.parent-meter-label { font-size:0.78rem; color:var(--ink-soft); font-weight:600; margin-bottom:0.4rem; }
+.battery { position:relative; height:24px; background:#ece4f7; border-radius:999px; border:2px solid #fff; overflow:hidden; box-shadow:inset 0 2px 3px rgba(0,0,0,0.1); }
+.battery-fill { height:100%; width:85%; border-radius:999px; background:linear-gradient(90deg,var(--grass),var(--grass-deep)); transition:width 0.5s cubic-bezier(.4,1.4,.5,1), background 0.4s ease; display:flex; align-items:center; justify-content:flex-end; padding-right:7px; }
+.battery-num { font-family:'Baloo 2',sans-serif; font-weight:800; color:#fff; font-size:0.78rem; text-shadow:0 1px 2px rgba(0,0,0,0.25); }
+.parent-rows { display:flex; flex-direction:column; gap:0.6rem; }
+.prow { display:flex; justify-content:space-between; align-items:center; background:#f6f3fc; border-radius:14px; padding:0.6rem 0.9rem; font-size:0.85rem; color:var(--ink); font-weight:500; }
+.prow .pv { font-family:'Baloo 2',sans-serif; font-weight:700; color:var(--grape); }
+.parent-note { font-size:0.72rem; color:var(--ink-soft); text-align:center; line-height:1.4; margin-top:0.3rem; }
+
+@media (max-width:480px){
+  .phone, .controls-card { width:100%; max-width:340px; }
+  .stage { gap:1.8rem; }
+}
+</style>
+</head>
+<body>
+
+<h1 class="app-title">NoorStep™ Adaptive Mobility System</h1>
+<p class="app-sub">A Predictive Fatigue-Aware Mobility Support System for Children with Morquio Syndrome Type IVA</p>
+
+<div class="stage">
+
+  <!-- KID: APPLE WATCH — energy + advice only -->
+  <div class="device-col">
+    <div class="device-tag">⌚ Noor's Watch</div>
+    <div class="watch-case">
+      <div class="watch-screen" id="watch-screen">
+        <div class="watch-statusbar"><span>9:41</span><span>🔋</span></div>
+        <div class="buddy" id="buddy">😃</div>
+        <div class="ring-wrap">
+          <svg class="ring-svg" width="88" height="88">
+            <circle class="ring-bg" cx="44" cy="44" r="38"></circle>
+            <circle class="ring-fill" id="ring-fill" cx="44" cy="44" r="38"></circle>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-num" id="ring-num">85</div>
+            <div class="ring-cap">ENERGY</div>
+          </div>
+        </div>
+        <div class="buddy-says" id="buddy-says">You're doing amazing! 🌟</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REMOTE -->
+  <div class="device-col">
+    <div class="device-tag">🎮 Try it out</div>
+    <div class="controls-card">
+      <h3>Walking Remote</h3>
+      <p class="hint">Slide these to change how Noor walks!</p>
+
+      <div class="slider-group">
+        <div class="slider-head"><span>🏃 How fast</span><span class="v" id="val-speed">1.2 m/s</span></div>
+        <input type="range" id="input-speed" min="0" max="2.5" step="0.1" value="1.2">
+      </div>
+      <div class="slider-group">
+        <div class="slider-head"><span>👣 Step size</span><span class="v" id="val-stride">52 cm</span></div>
+        <input type="range" id="input-stride" min="20" max="100" step="1" value="52">
+      </div>
+      <div class="slider-group">
+        <div class="slider-head"><span>🥁 Step beat</span><span class="v" id="val-cadence">105</span></div>
+        <input type="range" id="input-cadence" min="40" max="180" step="1" value="105">
+      </div>
+      <div class="slider-group">
+        <div class="slider-head"><span>🌈 Wobble</span><span class="v" id="val-var">2.4%</span></div>
+        <input type="range" id="input-var" min="0" max="15" step="0.1" value="2.4">
+      </div>
+    </div>
+  </div>
+
+  <!-- PARENT PHONE -->
+  <div class="device-col">
+    <div class="device-tag">📱 Grown-up Phone</div>
+    <div class="phone">
+      <div class="p-screen">
+        <div class="parent-top">
+          <div class="parent-title">Noor's Status</div>
+          <div class="parent-sub"><span class="live-dot"></span>Live now · updated just now</div>
+        </div>
+        <div class="parent-body">
+          <div class="status-card ok" id="status-card">
+            <div class="status-face" id="p-face">😃</div>
+            <div class="status-word" id="p-word">Doing Great</div>
+            <div class="status-msg" id="p-msg">Noor has lots of energy and is walking well.</div>
+          </div>
+          <div>
+            <div class="parent-meter-label">Energy level</div>
+            <div class="battery">
+              <div class="battery-fill" id="p-bfill" style="width:85%;"><span class="battery-num" id="p-bnum">85</span></div>
+            </div>
+          </div>
+          <div class="parent-rows">
+            <div class="prow"><span>🏃 Speed</span><span class="pv" id="p-speed">1.2 m/s</span></div>
+            <div class="prow"><span>👣 Stride</span><span class="pv" id="p-stride">52 cm</span></div>
+            <div class="prow"><span>🥁 Cadence</span><span class="pv" id="p-cadence">105 spm</span></div>
+            <div class="prow"><span>🌈 Steadiness</span><span class="pv" id="p-var">98%</span></div>
+          </div>
+          <p class="parent-note">This is a pretend prototype. The energy number is part of the game, not a real health reading.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const inputs = {
+  speed:document.getElementById('input-speed'),
+  stride:document.getElementById('input-stride'),
+  cadence:document.getElementById('input-cadence'),
+  variability:document.getElementById('input-var')
+};
+let lastLevel='ok';
+const buddyEl=document.getElementById('buddy');
+const RING_C = 2*Math.PI*38;
+
+function update(){
+  const s=parseFloat(inputs.speed.value);
+  const l=parseFloat(inputs.stride.value);
+  const c=parseFloat(inputs.cadence.value);
+  const v=parseFloat(inputs.variability.value);
+
+  document.getElementById('val-speed').innerText=s.toFixed(1)+' m/s';
+  document.getElementById('val-stride').innerText=l+' cm';
+  document.getElementById('val-cadence').innerText=c;
+  document.getElementById('val-var').innerText=v.toFixed(1)+'%';
+
+  // energy score — stride baseline 50–55cm for an 8-year-old
+  const nSpeed=Math.min(s/1.5,1);
+  const nStride=l>=50?1:l/50;
+  const nCadence=c>=100?1:c/100;
+  const nVar=1-(v/15);
+  let bb=Math.round(Math.max(10,Math.min(100,(nSpeed*25)+(nStride*25)+(nCadence*25)+(nVar*25))));
+  const level=bb>=70?'ok':bb>=40?'tired':'rest';
+
+  // ===== KID WATCH: energy + advice only =====
+  const ring=document.getElementById('ring-fill');
+  ring.style.strokeDasharray=RING_C;
+  ring.style.strokeDashoffset=RING_C-(bb/100)*RING_C;
+  document.getElementById('ring-num').innerText=bb;
+  const screen=document.getElementById('watch-screen');
+  const buddySays=document.getElementById('buddy-says');
+
+  screen.classList.remove('tired','rest');
+  let face,says;
+  if(level==='ok'){
+    face='😃';
+    ring.style.stroke='var(--grass)';
+    says=['You\'re doing amazing! 🌟','Keep it up, superstar!','Wow, look at you go!'][Math.floor(Math.random()*3)];
+  } else if(level==='tired'){
+    face='😅'; screen.classList.add('tired');
+    ring.style.stroke='var(--sun)';
+    says='Getting tired! Try slowing down or take a little break. 🐢';
+  } else {
+    face='😴'; screen.classList.add('rest');
+    ring.style.stroke='var(--watermelon)';
+    says='Time to rest! Sit down and take some deep breaths. 💛';
+  }
+  buddyEl.innerText=face;
+  if(level!==lastLevel){
+    buddySays.innerText=says;
+    buddyEl.classList.remove('bounce'); void buddyEl.offsetWidth; buddyEl.classList.add('bounce');
+  } else if(level==='ok'){ buddySays.innerText=says; }
+
+  // ===== PARENT PHONE: full details =====
+  const grad = level==='ok'?'linear-gradient(90deg,var(--grass),var(--grass-deep))'
+            : level==='tired'?'linear-gradient(90deg,var(--sun),var(--sun-deep))'
+            : 'linear-gradient(90deg,#ff8aa0,var(--watermelon))';
+  const pfill=document.getElementById('p-bfill');
+  pfill.style.width=bb+'%';
+  pfill.style.background=grad;
+  document.getElementById('p-bnum').innerText=bb;
+  document.getElementById('p-speed').innerText=s.toFixed(1)+' m/s';
+  document.getElementById('p-stride').innerText=l+' cm';
+  document.getElementById('p-cadence').innerText=c+' spm';
+  document.getElementById('p-var').innerText=Math.round(100-(v/15*100))+'%';
+
+  const card=document.getElementById('status-card');
+  card.classList.remove('ok','tired','rest'); card.classList.add(level);
+  const pface=document.getElementById('p-face'), pword=document.getElementById('p-word'), pmsg=document.getElementById('p-msg');
+  if(level==='ok'){ pface.innerText='😃'; pword.innerText='Doing Great'; pmsg.innerText='Noor has lots of energy and is walking well.'; }
+  else if(level==='tired'){ pface.innerText='😅'; pword.innerText='Getting Tired'; pmsg.innerText='Noor\'s energy is dropping. A short break might help.'; }
+  else { pface.innerText='😴'; pword.innerText='Needs a Rest'; pmsg.innerText='Noor\'s energy is low. Time to stop and rest.'; }
+
+  lastLevel=level;
+}
+Object.values(inputs).forEach(i=>i.addEventListener('input',update));
+update();
+</script>
+</body>
+</html>
